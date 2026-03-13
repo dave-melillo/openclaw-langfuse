@@ -1,0 +1,20 @@
+{
+  "name": "openclaw-langfuse",
+  "version": "1.0.0",
+  "description": "Langfuse LLM observability integration for OpenClaw multi-agent system",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --test src/**/*.test.js"
+  },
+  "keywords": ["openclaw", "langfuse", "observability", "llm", "monitoring"],
+  "author": "X-Men Team",
+  "license": "MIT",
+  "dependencies": {
+    "langfuse": "^3.0.0",
+    "langfuse-node": "^3.0.0"
+  },
+  "devDependencies": {
+    "dotenv": "^16.0.0"
+  }
+}
