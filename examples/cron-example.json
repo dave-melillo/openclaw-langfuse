@@ -1,0 +1,18 @@
+{
+  "name": "Weekly Langfuse Trace Analysis",
+  "schedule": {
+    "kind": "cron",
+    "expr": "0 17 * * 5",
+    "tz": "America/New_York"
+  },
+  "payload": {
+    "kind": "agentTurn",
+    "message": "Run Langfuse trace analysis:\n\n1. Execute: node scripts/analyze-traces.js\n2. Post LESSONS_LEARNED.md to #blackbird\n3. All agents will read it automatically",
+    "timeoutSeconds": 300
+  },
+  "sessionTarget": "isolated",
+  "delivery": {
+    "mode": "announce",
+    "channel": "discord"
+  }
+}

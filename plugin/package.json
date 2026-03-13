@@ -1,0 +1,10 @@
+{
+  "name": "openclaw-langfuse",
+  "version": "1.0.0",
+  "description": "Langfuse LLM observability plugin for OpenClaw",
+  "type": "module",
+  "main": "index.ts",
+  "dependencies": {
+    "langfuse": "^3.29.0"
+  }
+}
