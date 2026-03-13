@@ -1,0 +1,44 @@
+{
+  "id": "openclaw-langfuse",
+  "kind": "observability",
+  "uiHints": {
+    "publicKey": {
+      "label": "Langfuse Public Key",
+      "sensitive": false,
+      "placeholder": "pk-lf-...",
+      "help": "Your public key from Langfuse (or use ${LANGFUSE_PUBLIC_KEY})"
+    },
+    "secretKey": {
+      "label": "Langfuse Secret Key",
+      "sensitive": true,
+      "placeholder": "sk-lf-...",
+      "help": "Your secret key from Langfuse (or use ${LANGFUSE_SECRET_KEY})"
+    },
+    "baseUrl": {
+      "label": "Langfuse Base URL",
+      "placeholder": "https://cloud.langfuse.com",
+      "help": "Langfuse endpoint (cloud or self-hosted)"
+    },
+    "enabled": {
+      "label": "Enable Tracking",
+      "help": "Enable/disable Langfuse tracking"
+    },
+    "debug": {
+      "label": "Debug Logging",
+      "help": "Enable verbose debug logs",
+      "advanced": true
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "publicKey": { "type": "string" },
+      "secretKey": { "type": "string" },
+      "baseUrl": { "type": "string" },
+      "enabled": { "type": "boolean" },
+      "debug": { "type": "boolean" }
+    },
+    "required": ["publicKey", "secretKey"]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "plugins": {
+    "allow": ["openclaw-langfuse"],
+    "entries": {
+      "openclaw-langfuse": {
+        "enabled": true,
+        "config": {
+          "publicKey": "pk-lf-your-public-key",
+          "secretKey": "sk-lf-your-secret-key",
+          "baseUrl": "https://us.cloud.langfuse.com",
+          "enabled": true,
+          "debug": false
+        }
+      }
+    }
+  }
+}

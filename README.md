@@ -1,29 +1,91 @@
-# OpenClaw Langfuse Integration
+# @openclaw/langfuse
 
-LLM observability for the OpenClaw multi-agent system. Track costs, performance, and quality across all agents and missions.
+**Complete LLM observability + reinforcement learning for OpenClaw multi-agent systems.**
+
+Turn-key installation. Real-time traces. Automated analysis. Continuous improvement.
+
+[![npm version](https://badge.fury.io/js/%40openclaw%2Flangfuse.svg)](https://www.npmjs.com/package/@openclaw/langfuse)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+---
 
 ## Features
 
-✅ **LLM Call Tracking:** Automatically capture all model requests (Anthropic, OpenAI, Google, OpenRouter)  
-✅ **Multi-Agent Traces:** End-to-end visibility across Gambit → Beast → Wolverine → Magneto workflows  
-✅ **Cost Attribution:** Know which agent/mission consumed what tokens and cost  
-✅ **Performance Metrics:** Latency, token usage, error rates per agent  
-✅ **Quality Scores:** Track UAT pass rates, completion times, user satisfaction  
-✅ **Flexible Hosting:** Langfuse Cloud or self-hosted on Fly.io/Railway  
+✅ **Real-Time Observability**
+- See all LLM interactions in Langfuse dashboard
+- Track success/failure, latency, agent metadata
+- Drill down into specific conversations
 
-## Installation
+✅ **Automated Analysis**
+- Weekly trace analysis (configurable schedule)
+- Pattern recognition (what works, what fails)
+- High-latency operation detection
 
-```bash
-npm install openclaw-langfuse
-```
+✅ **Reinforcement Learning**
+- Auto-generated LESSONS_LEARNED.md
+- Agents read and apply insights automatically
+- Continuous improvement loop
+
+✅ **Scoring Framework**
+- Score task success (`langfuse_score()` tool)
+- Track UAT pass rates, code quality, user satisfaction
+- Measure improvement over time
+
+✅ **5-Minute Setup**
+- Interactive CLI wizard
+- One-command installation
+- Auto-configured cron jobs
+
+---
 
 ## Quick Start
 
-### 1. Set Up Langfuse
+### 1. Install
 
-**Option A: Langfuse Cloud (Recommended)**
+```bash
+npm install @openclaw/langfuse
+```
+
+### 2. Run Setup Wizard
+
+```bash
+npx openclaw-langfuse
+```
+
+The wizard will:
+- Ask for your Langfuse keys (Cloud or self-hosted)
+- Generate OpenClaw config
+- Set up weekly analysis cron job
+- Save config files
+
+### 3. Apply Config
+
+```bash
+openclaw config patch < openclaw-langfuse-config.json
+openclaw gateway restart
+```
+
+### 4. Check Traces
+
+Go to your Langfuse dashboard (e.g., https://us.cloud.langfuse.com) and start seeing traces!
+
+---
+
+## Installation (Manual)
+
+If you prefer manual installation:
+
+### 1. Install Package
+
+```bash
+npm install @openclaw/langfuse
+```
+
+### 2. Get Langfuse Keys
+
+**Option A: Langfuse Cloud (recommended)**
 1. Sign up at https://cloud.langfuse.com
-2. Create a new project
+2. Create a project
 3. Copy your public and secret keys
 
 **Option B: Self-Hosted**
@@ -31,292 +93,279 @@ npm install openclaw-langfuse
 2. Follow https://langfuse.com/docs/deployment/self-host
 3. Use your custom base URL
 
-### 2. Configure Environment
+### 3. Configure OpenClaw
 
-```bash
-cp .env.example .env
-# Edit .env with your Langfuse keys
-```
+Add to your `~/.openclaw/openclaw.json`:
 
-### 3. Integrate with OpenClaw Gateway
-
-Add to your OpenClaw gateway initialization:
-
-```javascript
-import { OpenClawMiddleware } from 'openclaw-langfuse';
-
-// Initialize middleware
-const langfuse = new OpenClawMiddleware({
-  publicKey: process.env.LANGFUSE_PUBLIC_KEY,
-  secretKey: process.env.LANGFUSE_SECRET_KEY,
-  baseUrl: process.env.LANGFUSE_BASE_URL,
-  enabled: process.env.LANGFUSE_ENABLED !== 'false'
-});
-
-// Hook into model request lifecycle
-async function makeModelRequest(sessionKey, agentId, model, messages, params, metadata) {
-  // Before request
-  const tracking = langfuse.beforeRequest({
-    sessionKey,
-    agentId,
-    model,
-    messages,
-    parameters: params,
-    metadata: {
-      missionId: metadata.missionId,
-      phase: metadata.phase,
-      userId: metadata.userId,
-      channel: metadata.channel
-    }
-  });
-
-  try {
-    // Make actual LLM API call
-    const response = await callLLMProvider(model, messages, params);
-
-    // After successful request
-    langfuse.afterRequest({
-      ...tracking,
-      output: response.choices[0].message,
-      usage: {
-        promptTokens: response.usage.prompt_tokens,
-        completionTokens: response.usage.completion_tokens,
-        totalTokens: response.usage.total_tokens
-      },
-      metadata: {
-        model: response.model,
-        finishReason: response.choices[0].finish_reason
+```json
+{
+  "plugins": {
+    "allow": ["openclaw-langfuse"],
+    "entries": {
+      "openclaw-langfuse": {
+        "enabled": true,
+        "config": {
+          "publicKey": "pk-lf-your-public-key",
+          "secretKey": "sk-lf-your-secret-key",
+          "baseUrl": "https://us.cloud.langfuse.com",
+          "enabled": true,
+          "debug": false
+        }
       }
-    });
-
-    return response;
-  } catch (error) {
-    // Track errors
-    langfuse.afterRequest({
-      ...tracking,
-      error,
-      metadata: { errorType: error.name }
-    });
-    throw error;
+    }
   }
 }
-
-// Track agent actions (tool calls, sessions, handoffs)
-langfuse.trackAction({
-  sessionKey: 'agent:gambit:main',
-  agentId: 'gambit',
-  actionName: 'sessions_spawn',
-  input: { task: 'Write PRD for Langfuse integration', runtime: 'subagent' },
-  output: { sessionKey: 'agent:beast:xyz123', status: 'spawned' },
-  startTime: startTime,
-  endTime: new Date(),
-  metadata: { missionId: 'PRD-LANGFUSE' }
-});
-
-// Score missions (UAT results, completion metrics)
-langfuse.scoreMission({
-  sessionKey: 'agent:magneto:abc789',
-  scoreName: 'uat_pass',
-  value: 1, // 1 = pass, 0 = fail
-  comment: 'All requirements met. Clean implementation.'
-});
-
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  await langfuse.flush();
-  await langfuse.shutdown();
-});
 ```
 
-## Usage Examples
-
-### Track a Multi-Agent Mission
-
-```javascript
-// 1. Gambit receives user request
-const tracking = langfuse.beforeRequest({
-  sessionKey: 'agent:gambit:main',
-  agentId: 'gambit',
-  model: 'anthropic/claude-sonnet-4-5',
-  messages: [{ role: 'user', content: 'Build a new feature: user dashboard' }],
-  metadata: { 
-    missionId: 'IDEA-20260312-001', 
-    phase: 'ideation',
-    channel: 'discord'
-  }
-});
-
-// 2. Gambit spawns Beast for PRD
-langfuse.trackAction({
-  sessionKey: 'agent:gambit:main',
-  agentId: 'gambit',
-  actionName: 'sessions_spawn',
-  input: { agent: 'beast', task: 'Write PRD for user dashboard' },
-  output: { sessionKey: 'agent:beast:xyz', status: 'spawned' }
-});
-
-// 3. Beast writes PRD (tracked automatically via middleware)
-
-// 4. Wolverine implements code (tracked automatically)
-
-// 5. Magneto validates (score the result)
-langfuse.scoreMission({
-  sessionKey: 'agent:magneto:abc',
-  scoreName: 'validation_result',
-  value: 1, // Pass
-  comment: 'All acceptance criteria met. Approved for merge.'
-});
-```
-
-### Cost Attribution
-
-In Langfuse dashboard:
-1. Go to **Traces** → Filter by `mission:20260312-001`
-2. View **Token Usage** and **Cost** breakdown
-3. Drill down to see which agent consumed what
-
-### Performance Monitoring
-
-Query Langfuse for:
-- **Average latency per agent:** Which agents are slow?
-- **Error rates:** Which models/providers fail most?
-- **Token efficiency:** Which agents use tokens wastefully?
-
-## API Reference
-
-### `OpenClawMiddleware`
-
-**Constructor:**
-```javascript
-new OpenClawMiddleware(config)
-```
-- `config.publicKey` - Langfuse public key
-- `config.secretKey` - Langfuse secret key
-- `config.baseUrl` - Langfuse endpoint (default: cloud.langfuse.com)
-- `config.enabled` - Enable/disable tracking (default: true)
-
-**Methods:**
-
-- `beforeRequest({ sessionKey, agentId, model, messages, parameters, metadata })` - Call before LLM request
-- `afterRequest({ traceId, generationId, startTime, model, input, output, usage, error, metadata })` - Call after LLM response
-- `trackAction({ sessionKey, agentId, actionName, input, output, startTime, endTime, metadata, error })` - Track agent actions
-- `scoreMission({ sessionKey, scoreName, value, comment })` - Score a workflow/mission
-- `endTrace(sessionKey)` - Explicitly end a trace
-- `flush()` - Flush pending events
-- `shutdown()` - Graceful shutdown
-
-### `AgentTagger`
-
-**Methods:**
-
-- `generateTags({ agentId, missionId, phase, channel, custom })` - Generate consistent tags
-- `getAgentRole(agentId)` - Map agent ID to role
-- `extractMissionId(cardName)` - Extract mission ID from Trello card name
-- `inferPhase(listName)` - Determine workflow phase
-
-## Deployment
-
-### Langfuse Cloud (Easiest)
-
-1. Sign up: https://cloud.langfuse.com
-2. Create project
-3. Add keys to `.env`
-4. Done!
-
-**Pricing:** Free tier includes 50k events/month. Paid plans start at $59/month.
-
-### Self-Hosted (Full Control)
-
-**Deploy to Fly.io:**
+Or use `openclaw config patch`:
 
 ```bash
-# Clone Langfuse
-git clone https://github.com/langfuse/langfuse.git
-cd langfuse
-
-# Configure
-cp .env.example .env
-# Edit .env with database URL, etc.
-
-# Deploy
-fly launch
-fly deploy
-
-# Get your URL
-fly info
+openclaw config patch < examples/config-example.json
 ```
 
-**Deploy to Railway:**
+### 4. Set Up Weekly Analysis (Optional but Recommended)
 
-1. Fork https://github.com/langfuse/langfuse
-2. Connect to Railway
-3. Add PostgreSQL service
-4. Deploy
+Create a cron job for weekly trace analysis:
 
-**Cost Estimate:** ~$10-30/month (depends on usage, database size)
+```bash
+openclaw cron add < examples/cron-example.json
+```
 
-## Tagging Strategy
+This runs every Friday at 5pm EST and:
+- Queries Langfuse for past week's traces
+- Analyzes patterns (success/fail, latency, agent activity)
+- Generates `LESSONS_LEARNED.md`
+- Posts to #blackbird
+- Agents read it automatically
 
-All traces auto-tagged with:
+### 5. Restart OpenClaw
 
-- `agent:<agentId>` - Which agent (gambit, beast, wolverine, etc.)
-- `role:<role>` - Agent role (orchestrator, coder, validator)
-- `mission:<missionId>` - Mission ID from Trello (e.g., 20260312-001)
-- `phase:<phase>` - Workflow phase (ideation, specification, implementation, validation)
-- `channel:<channel>` - Source channel (discord, telegram, etc.)
+```bash
+openclaw gateway restart
+```
 
-Query examples:
-- All Wolverine traces: `agent:wolverine`
-- All PRD work: `phase:specification`
-- Specific mission: `mission:20260312-001`
-- All validation failures: `phase:validation` + score < 1
+---
 
-## Dashboard Setup
+## Usage
 
-### Key Dashboards to Create
+### Viewing Traces
 
-1. **Agent Performance**
-   - Latency per agent (avg, p95, p99)
-   - Error rate per agent
-   - Token usage per agent
+1. Go to your Langfuse dashboard
+2. Click **Traces** in sidebar
+3. See all agent interactions:
+   - Full conversation history
+   - Success/failure status
+   - Latency per interaction
+   - Agent metadata
 
-2. **Cost Attribution**
-   - Daily spend by agent
-   - Cost per mission
-   - Most expensive operations
+### Filtering Traces
 
-3. **Quality Metrics**
-   - UAT pass rate (Magneto validations)
-   - Task completion time
-   - Handoff success rate
+**By agent:**
+```
+tags:agent:wolverine
+```
 
-4. **Operational Health**
-   - API error rates
-   - Retry counts
-   - Timeout frequency
+**By success:**
+```
+metadata.success:true
+```
+
+**By latency:**
+```
+metadata.latencyMs:>10000
+```
+
+### Scoring Tasks (Agents)
+
+Agents can score task success for reinforcement learning:
+
+```javascript
+langfuse_score({
+  scoreName: "uat_pass",
+  value: 1.0, // 0 = fail, 1 = pass
+  comment: "All requirements met"
+})
+```
+
+**Score types:**
+- `uat_pass` - UAT validation (0 or 1)
+- `code_quality` - Code quality (0-1)
+- `user_satisfaction` - User feedback (0-1)
+- `task_complexity` - Difficulty (0-1)
+- `prompt_effectiveness` - Prompt quality (0-1)
+
+### Reading Lessons Learned
+
+Every week, agents receive `LESSONS_LEARNED.md` with insights:
+
+```markdown
+# Lessons Learned - Week of 2026-03-14
+
+## Summary
+- Total traces: 487
+- Success rate: 94.2%
+- Failed traces: 28
+
+## Insights
+- Overall success rate: 94.2%
+- Most active agent: wolverine (152 traces)
+- 5 high-latency operations (avg: 12.3s)
+
+## Failed Traces (Top 5)
+- wolverine: code generation timeout
+- beast: PRD missing edge cases
+- magneto: validation false positive
+
+## Recommendations
+- ⚠️ Latency issues detected. Optimize high-latency operations.
+```
+
+Agents read this before tasks and:
+- Avoid known failure patterns
+- Apply successful approaches
+- Self-optimize over time
+
+---
+
+## Reinforcement Learning Loop
+
+```
+Week 1:
+  → Agents work normally
+  → Langfuse captures all traces
+
+Friday 5pm:
+  → Analysis runs automatically
+  → LESSONS_LEARNED.md generated
+  → Posted to #blackbird
+
+Week 2:
+  → Agents read lessons
+  → Apply insights
+  → Success rate improves
+
+Repeat → Continuous improvement
+```
+
+---
+
+## Architecture
+
+```
+OpenClaw Agent
+      ↓
+   [Plugin Hook]
+      ↓
+   Langfuse SDK
+      ↓
+  Langfuse Cloud/Self-Hosted
+      ↓
+  Weekly Analysis Script
+      ↓
+  LESSONS_LEARNED.md
+      ↓
+  Agents (auto-read)
+```
+
+**Components:**
+- **Plugin** (`plugin/index.ts`) - Captures traces
+- **Tools** (`plugin/tools/score.ts`) - Scoring for RL
+- **Scripts** (`scripts/analyze-traces.js`) - Weekly analysis
+- **CLI** (`cli/setup.js`) - Setup wizard
+
+---
+
+## Configuration
+
+### Plugin Config
+
+```json
+{
+  "publicKey": "pk-lf-...",
+  "secretKey": "sk-lf-...",
+  "baseUrl": "https://us.cloud.langfuse.com",
+  "enabled": true,
+  "debug": false
+}
+```
+
+### Cron Job Config
+
+```json
+{
+  "name": "Weekly Langfuse Trace Analysis",
+  "schedule": {
+    "kind": "cron",
+    "expr": "0 17 * * 5",
+    "tz": "America/New_York"
+  },
+  "payload": {
+    "kind": "agentTurn",
+    "message": "Run Langfuse trace analysis",
+    "timeoutSeconds": 300
+  },
+  "sessionTarget": "isolated"
+}
+```
+
+---
 
 ## Troubleshooting
 
 **No traces appearing?**
-- Check `LANGFUSE_ENABLED=true` in `.env`
+- Check `plugins.allow` includes `openclaw-langfuse`
 - Verify API keys are correct
-- Check network connectivity to Langfuse endpoint
-- Look for `[Langfuse] Initialized` log message
+- Check network connectivity
+- Look for `[langfuse] initialized` in logs
 
-**Missing token/cost data?**
-- Ensure `usage` object is passed in `afterRequest()`
-- Verify LLM provider returns usage in response
-- Check Langfuse model pricing configuration
+**Analysis not running?**
+- Check cron job: `openclaw cron list`
+- Verify schedule expression
+- Check logs: `openclaw logs | grep langfuse`
 
-**Traces not linked to missions?**
-- Pass `metadata.missionId` in `beforeRequest()`
-- Ensure Trello card naming follows `PRD-YYYYMMDD-NNN` format
-- Use `AgentTagger.extractMissionId()` to parse card names
+**Missing lessons learned?**
+- Ensure analysis ran successfully
+- Check workspace for `LESSONS_LEARNED.md`
+- Verify cron job delivery mode
+
+---
+
+## Examples
+
+See `examples/` directory:
+- `config-example.json` - Plugin configuration
+- `cron-example.json` - Weekly analysis cron job
+
+---
+
+## Development
+
+### Build
+
+```bash
+npm install
+```
+
+### Test
+
+```bash
+npm test
+```
+
+### Publish
+
+```bash
+npm publish --access public
+```
+
+---
 
 ## Contributing
 
-Found a bug? Want a feature? Open an issue or PR at:
-https://github.com/dave-melillo/openclaw-langfuse
+Found a bug? Want a feature? Open an issue or PR:  
+https://github.com/dave-melillo/openclaw-langfuse/issues
+
+---
 
 ## License
 
@@ -324,4 +373,14 @@ MIT
 
 ---
 
-**Questions?** Ask in #blackbird or ping @Wolverine 🐺
+## Credits
+
+Built by the X-Men Team for the OpenClaw community.
+
+**Questions?**  
+- GitHub: https://github.com/dave-melillo/openclaw-langfuse
+- OpenClaw Discord: https://discord.com/invite/clawd
+
+---
+
+**Turn your multi-agent system into a self-improving learning machine.** 🐺
